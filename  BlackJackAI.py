@@ -2,6 +2,7 @@ import random
 from random import shuffle
 import os
 import neat
+import copy
 
 class Card:
     
@@ -50,9 +51,10 @@ class Hand:
             return self.aces
         
         def handScore(self):
+            scr = copy.copy(self.score)
             if self.score > 21 and self.aces > 0:
-                self.score -= 10 * self.aces
-            return self.score
+                scr -= 10 * self.aces
+            return scr
             
         def showCard(self):
             self.hand[-1].printCard()
@@ -84,8 +86,8 @@ def eval_genomes(genomes, config):
                 decks.append(Deck())      
                 dealers.append(Hand())
                 players.append(Hand())
-                print(type(x))
-                print(x)
+                #print(type(x))
+                #print(x)
                 dealers[x].takeCard(decks[x].dealCard())
                 print(f"Dealer {x} got ")
                 dealers[x].showCard()
@@ -93,50 +95,59 @@ def eval_genomes(genomes, config):
                 players[x].takeCard(decks[x].dealCard())
                 print(f"Player {x} got ")
                 players[x].showCard()
-            for x, player in players:   
+            for x, player in enumerate(players):   
                 while player.handScore() < 21:
                     ge[x].fitness += 0.1
-                    output = nets[players.index(player)].activate(
-    pocket,
+                    output = nets[x].activate((
+    pockets[x],
     player.handScore(),
-    player.hand,
+    #player.hand,
     dealers[x].hand[0].getCardValue(),
-    dealers[x].hand[0])
+    dealers[x].hand[0].cardRank.index(dealers[x].hand[0].rank)
+    ))
                     if output[0] > 0.5:
                         player.takeCard(decks[x].dealCard())
                         print(f"Player{x} got ")
                         player.showCard()
                         ge[x].fitness += 0.5
+                    else:
+                        break
                 if player.handScore() > 21:
                     print(f"Player {x} score is {player.handScore()} and Dealer {x} score is {dealers[x].handScore()}. \nPlayer {x} lost.")
                     ge[x].fitness -= 5
-                    pocket -= pocket / 2
-                    print(f"Player's {x} total is {pocket}")
-                print(f"Dealer {x} got")
-                dealers[x].showCard()
-                while dealers[x].handScore() < 17:
-                    dealers[x].takeCard(decks[x].dealCard())
+                    pockets[x] -= pockets[x] / 2
+                    print(f"Player's {x} total is {pockets[x]}")
+                    #break
+                elif player.handScore() <= 21:                
                     print(f"Dealer {x} got")
                     dealers[x].showCard()
-                if dealers[x].handScore() > 21 or player.handScore() > dealers[x].handScore():
+                    while dealers[x].handScore() < 17:
+                        dealers[x].takeCard(decks[x].dealCard())
+                        print(f"Dealer {x} got")
+                        dealers[x].showCard()
+                elif dealers[x].handScore() > 21 or player.handScore() > dealers[x].handScore():
                     print(f"Player's {x}' score is {player.handScore()} and Dealer's {x}' score is {dealers[x].handScore()}. \nPlayer {x} win.")
                     ge[x].fitness += 10
-                    pocket += pocket / 2
-                    print(f"Player's {x} total is {pocket}")
-                if player.handScore() < dealers[x].handScore():
+                    pockets[x] += pockets[x] / 2
+                    print(f"Player's {x} total is {pockets[x]}")
+                    #break
+                elif player.handScore() < dealers[x].handScore():
                     print(f"Player {x} score is {player.handScore()} and Dealer {x} score is {dealers[x].handScore()}. \nPlayer {x} lost.")
                     ge[x].fitness -= 5
-                    pocket -= pocket / 2
-                    print(f"Player's {x} total is {pocket}")
-                if player.handScore() == dealers[x].handScore():
+                    pockets[x] -= pockets[x] / 2
+                    print(f"Player's {x} total is {pockets[x]}")
+                    #break
+                elif player.handScore() == dealers[x].handScore():
                     print(f"Player's {x}' score is {player.handScore()} and Dealer's {x}' score is {dealers[x].handScore()}. \npush")
                     ge[x].fitness += 10
-                    pocket += pocket / 2
-                    print(f"Player's {x} total is {pocket}")                
-                if pocet < 15:
+                    pockets[x] += pockets[x] / 2
+                    print(f"Player's {x} total is {pockets[x]}")
+                    #break
+            for x, pocket in enumerate(pockets):   
+                if pocket < 15:
                      ge[x].fitness -= 100
                      decks.pop(x)
-                     pocket.pop()
+                     pockets.pop(x)
                      nets.pop(x)
                      ge.pop(x)
                      dealers.pop(x)
